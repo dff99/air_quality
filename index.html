@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>海港区空气质量调研报告</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanta/0.5.24/vanta.birds.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2c5530;
+            --secondary-color: #8fbc8f;
+            --accent-color: #d4af37;
+            --text-dark: #1a1a1a;
+            --text-light: #6b7280;
+            --bg-light: #f8fafc;
+            --bg-white: #ffffff;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-light);
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+        
+        .hero-title {
+            font-family: 'Playfair Display', serif;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            font-weight: 500;
+            color: var(--primary-color);
+        }
+        
+        .vanta-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .data-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid var(--accent-color);
+        }
+        
+        .data-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .metric-highlight {
+            background: linear-gradient(135deg, var(--accent-color), #f4d03f);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+        }
+        
+        .nav-link {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--accent-color);
+            transition: width 0.3s ease;
+        }
+        
+        .nav-link:hover::after {
+            width: 100%;
+        }
+        
+        .chart-container {
+            background: var(--bg-white);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            padding: 24px;
+            margin: 20px 0;
+        }
+        
+        .interactive-element {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .interactive-element:hover {
+            transform: scale(1.02);
+        }
+        
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeInUp 0.8s ease forwards;
+        }
+        
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .stagger-1 { animation-delay: 0.1s; }
+        .stagger-2 { animation-delay: 0.2s; }
+        .stagger-3 { animation-delay: 0.3s; }
+        .stagger-4 { animation-delay: 0.4s; }
+        
+        .table-responsive {
+            overflow-x: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-white);
+        }
+        
+        .data-table th {
+            background: var(--primary-color);
+            color: white;
+            padding: 16px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .data-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .data-table tr:hover {
+            background: #f8fafc;
+        }
+        
+        .pollutant-tag {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            margin: 2px;
+        }
+        
+        .tag-pm25 { background: #fef3c7; color: #92400e; }
+        .tag-pm10 { background: #fed7d7; color: #c53030; }
+        .tag-o3 { background: #bee3f8; color: #2b6cb0; }
+        .tag-no2 { background: #e9d8fd; color: #6b46c1; }
+        .tag-so2 { background: #d1fae5; color: #065f46; }
+        .tag-co { background: #fce7f3; color: #be185d; }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full bg-white/90 backdrop-blur-md z-50 border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-green-600 to-green-400 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-leaf text-white text-lg"></i>
+                    </div>
+                    <span class="text-xl font-semibold text-gray-800">海港区空气质量调研</span>
+                </div>
+                <div class="hidden md:flex space-x-8">
+                    <a href="#overview" class="nav-link text-gray-600 hover:text-gray-800">调研概览</a>
+                    <a href="#data" class="nav-link text-gray-600 hover:text-gray-800">数据分析</a>
+                    <a href="#conclusions" class="nav-link text-gray-600 hover:text-gray-800">关键结论</a>
+                    <a href="#recommendations" class="nav-link text-gray-600 hover:text-gray-800">治理成效</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="overview" class="relative min-h-screen flex items-center justify-center overflow-hidden">
+        <div id="vanta-bg" class="vanta-bg"></div>
+        <div class="relative z-10 max-w-6xl mx-auto px-6 text-center">
+            <div class="glass-card rounded-2xl p-12 fade-in">
+                <h1 class="hero-title text-5xl md:text-6xl mb-6 leading-tight">
+                    海港区空气质量调研报告
+                </h1>
+                <p class="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+                    基于历史数据与实地监测的综合分析，深入探究海港区空气质量变化趋势与治理成效
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+                    <div class="text-center">
+                        <div class="text-3xl font-bold metric-highlight">30天</div>
+                        <div class="text-gray-600 mt-2">实地监测周期</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold metric-highlight">3个</div>
+                        <div class="text-gray-600 mt-2">典型监测区域</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold metric-highlight">6项</div>
+                        <div class="text-gray-600 mt-2">主要污染物指标</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Research Background -->
+    <section class="py-20 bg-white">
+        <div class="max-w-6xl mx-auto px-6">
+            <div class="text-center mb-16 fade-in">
+                <h2 class="section-title text-4xl mb-6">调研背景与工作安排</h2>
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto">
+                    本次调研采用多维度数据分析方法，结合历史数据回顾与实地采样监测，全面评估海港区空气质量状况
+                </p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div class="data-card glass-card rounded-xl p-8 fade-in stagger-1">
+                    <div class="flex items-center mb-6">
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+                            <i class="fas fa-database text-blue-600 text-xl"></i>
+                        </div>
+                        <h3 class="text-2xl font-semibold text-gray-800">数据来源</h3>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="border-l-4 border-blue-400 pl-4">
+                            <h4 class="font-semibold text-gray-800 mb-2">历史数据</h4>
+                            <p class="text-gray-600 text-sm">海港区空气质量官网公开数据，包含PM2.5、PM10、O₃、NO₂、SO₂、CO等完整指标体系</p>
+                        </div>
+                        <div class="border-l-4 border-green-400 pl-4">
+                            <h4 class="font-semibold text-gray-800 mb-2">实地数据</h4>
+                            <p class="text-gray-600 text-sm">11月1日-30日期间，在鹏远宿舍、西门高速路、东门小吃街三个典型区域的连续30天采样监测</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="data-card glass-card rounded-xl p-8 fade-in stagger-2">
+                    <div class="flex items-center mb-6">
+                        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
+                            <i class="fas fa-microscope text-purple-600 text-xl"></i>
+                        </div>
+                        <h3 class="text-2xl font-semibold text-gray-800">研究方法</h3>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex items-start space-x-3">
+                            <div class="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center mt-0.5">
+                                <span class="text-xs font-semibold text-indigo-600">1</span>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-800">时间维度分析</h4>
+                                <p class="text-gray-600 text-sm">年/月尺度污染物浓度趋势拟合与变化规律识别</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start space-x-3">
+                            <div class="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center mt-0.5">
+                                <span class="text-xs font-semibold text-indigo-600">2</span>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-800">污染物关联分析</h4>
+                                <p class="text-gray-600 text-sm">基于相关性热力图的特性解读与污染源识别</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start space-x-3">
+                            <div class="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center mt-0.5">
+                                <span class="text-xs font-semibold text-indigo-600">3</span>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-800">区域对比分析</h4>
+                                <p class="text-gray-600 text-sm">三个典型区域实地数据差异与特征识别</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Data Analysis -->
+    <section id="data" class="py-20 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-16 fade-in">
+                <h2 class="section-title text-4xl mb-6">数据分析与关键发现</h2>
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto">
+                    通过多维度数据分析，深入揭示海港区空气质量的时空变化特征与污染物关联规律
+                </p>
+            </div>
+
+            <!-- Monthly Analysis -->
+            <div class="mb-16 fade-in stagger-1">
+                <div class="chart-container">
+                    <h3 class="text-2xl font-semibold text-gray-800 mb-6 flex items-center">
+                        <i class="fas fa-calendar-alt text-blue-600 mr-3"></i>
+                        月维度关联与差异分析
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                        <div class="interactive-element">
+                            <h4 class="text-lg font-semibold text-gray-800 mb-4">污染物浓度差异特征</h4>
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                                    <span class="font-medium">主要污染物</span>
+                                    <div class="text-right">
+                                        <span class="pollutant-tag tag-pm25">PM2.5</span>
+                                        <span class="pollutant-tag tag-pm10">PM10</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                                    <span class="font-medium">次要污染物</span>
+                                    <div class="text-right">
+                                        <span class="pollutant-tag tag-no2">NO₂</span>
+                                        <span class="pollutant-tag tag-so2">SO₂</span>
+                                        <span class="pollutant-tag tag-co">CO</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="interactive-element">
+                            <h4 class="text-lg font-semibold text-gray-800 mb-4">季节变化规律</h4>
+                            <div class="space-y-3">
+                                <div class="p-3 bg-orange-50 rounded-lg">
+                                    <div class="font-medium text-orange-800">春季特征</div>
+                                    <div class="text-sm text-orange-600">PM2.5/PM10浓度最高，扬尘+燃煤残留影响</div>
+                                </div>
+                                <div class="p-3 bg-green-50 rounded-lg">
+                                    <div class="font-medium text-green-800">夏季特征</div>
+                                    <div class="text-sm text-green-600">O₃浓度最高，颗粒物浓度最低</div>
+                                </div>
+                                <div class="p-3 bg-gray-50 rounded-lg">
+                                    <div class="font-medium text-gray-800">秋冬特征</div>
+                                    <div class="text-sm text-gray-600">静稳天气易积聚，但冬季无传统PM2.5高峰</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>分析类型</th>
+                                    <th>具体内容</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="font-semibold">污染物差异</td>
+                                    <td>
+                                        <div class="space-y-2">
+                                            <div><strong>浓度量级：</strong>PM2.5、PM10 为主要污染物（浓度几十级）；NO₂、SO₂、CO 为次要污染物（浓度个位数）</div>
+                                            <div><strong>季节趋势：</strong>PM2.5/PM10 "春高夏低"，O₃"夏高春低"，NO₂/SO₂/CO 全年平稳低位</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="font-semibold">污染物关联</td>
+                                    <td>
+                                        <div class="space-y-2">
+                                            <div><strong>PM2.5 与 PM10：</strong>趋势同步（污染同源）</div>
+                                            <div><strong>PM2.5/PM10 与 O₃：</strong>趋势反向（夏季颗粒物易扩散、O₃光化生成多）</div>
+                                            <div><strong>NO₂/SO₂/CO：</strong>长期低浓度且平稳（排放管控成效显著）</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Yearly Analysis -->
+            <div class="mb-16 fade-in stagger-2">
+                <div class="chart-container">
+                    <h3 class="text-2xl font-semibold text-gray-800 mb-6 flex items-center">
+                        <i class="fas fa-chart-line text-green-600 mr-3"></i>
+                        年维度聚合分析
+                    </h3>
+                    
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>污染物类型</th>
+                                    <th>年均浓度趋势特征</th>
+                                    <th>治理措施/成效说明</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <span class="pollutant-tag tag-pm25">PM2.5</span>
+                                        <span class="pollutant-tag tag-pm10">PM10</span>
+                                    </td>
+                                    <td>先大幅下降、后波动趋稳（2013-2014 年骤降，后续平缓波动）</td>
+                                    <td>扬尘管控、移动源污染治理等措施，有效抑制颗粒物污染</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="pollutant-tag tag-so2">SO₂</span></td>
+                                    <td>从 2013 年较高水平持续下降，后期近乎趋近于 0</td>
+                                    <td>燃煤治理（锅炉淘汰、脱硫改造），落地成效极为显著</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span class="pollutant-tag tag-no2">NO₂</span>
+                                        <span class="pollutant-tag tag-co">CO</span>
+                                    </td>
+                                    <td>NO₂：长期维持低位并缓慢下降；CO：始终处于低位且波动极小</td>
+                                    <td>港口船舶尾气管控、机动车减排等，已形成排放管控长效机制</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="pollutant-tag tag-o3">O₃</span></td>
+                                    <td>2013-2017 年缓慢上升后维持稳定，未出现明显下降</td>
+                                    <td>光化学污染治理难度较高，后续需强化挥发性有机物与氮氧化物的协同管控</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Field Data Analysis -->
+            <div class="fade-in stagger-3">
+                <div class="chart-container">
+                    <h3 class="text-2xl font-semibold text-gray-800 mb-6 flex items-center">
+                        <i class="fas fa-map-marker-alt text-red-600 mr-3"></i>
+                        实地数据分析
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                        <div class="interactive-element bg-gradient-to-br from-red-50 to-orange-50 p-6 rounded-xl border border-red-100">
+                            <div class="text-center mb-4">
+                                <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <i class="fas fa-utensils text-red-600 text-2xl"></i>
+                                </div>
+                                <h4 class="text-lg font-semibold text-gray-800">美食街区域</h4>
+                            </div>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span>PM2.5峰值</span>
+                                    <span class="font-semibold text-red-600">~120μg/m³</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>PM10峰值</span>
+                                    <span class="font-semibold text-red-600">~140μg/m³</span>
+                                </div>
+                                <div class="text-xs text-gray-600 mt-3">餐饮活动为主要污染源</div>
+                            </div>
+                        </div>
+                        
+                        <div class="interactive-element bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-100">
+                            <div class="text-center mb-4">
+                                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <i class="fas fa-road text-blue-600 text-2xl"></i>
+                                </div>
+                                <h4 class="text-lg font-semibold text-gray-800">西门高速路</h4>
+                            </div>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span>PM2.5峰值</span>
+                                    <span class="font-semibold text-blue-600">~120μg/m³</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>PM10峰值</span>
+                                    <span class="font-semibold text-blue-600">~140μg/m³</span>
+                                </div>
+                                <div class="text-xs text-gray-600 mt-3">交通扬尘为主要污染源</div>
+                            </div>
+                        </div>
+                        
+                        <div class="interactive-element bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl border border-green-100">
+                            <div class="text-center mb-4">
+                                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <i class="fas fa-home text-green-600 text-2xl"></i>
+                                </div>
+                                <h4 class="text-lg font-semibold text-gray-800">鹏远宿舍</h4>
+                            </div>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span>PM2.5范围</span>
+                                    <span class="font-semibold text-green-600">20-60μg/m³</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>PM10范围</span>
+                                    <span class="font-semibold text-green-600">较低水平</span>
+                                </div>
+                                <div class="text-xs text-gray-600 mt-3">生活区空气质量相对较好</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>分析维度</th>
+                                    <th>具体特征</th>
+                                    <th>关键数据/现象支撑</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="font-semibold">区域浓度差异</td>
+                                    <td>美食街、西门颗粒物浓度显著高于宿舍区；CO浓度三地均偏低且差异小</td>
+                                    <td>美食街/西门 PM2.5峰值近120μg/m³、PM10峰值达140μg/m³；宿舍区 PM2.5多为20-60μg/m³；三地CO均维持0-10mg/m³</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-semibold">污染物波动特征</td>
+                                    <td>颗粒物波动剧烈，CO浓度稳定无明显波动</td>
+                                    <td>三地PM2.5/PM10同步出现11月中旬、11月底等浓度峰值；监测时段内CO浓度曲线平缓</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-semibold">污染协同性</td>
+                                    <td>三地颗粒物浓度峰值时段高度同步</td>
+                                    <td>11月中旬、11月底等关键时段，美食街、西门、宿舍的PM2.5/PM10浓度峰值同步出现</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Key Conclusions -->
+    <section id="conclusions" class="py-20 bg-white">
+        <div class="max-w-6xl mx-auto px-6">
+            <div class="text-center mb-16 fade-in">
+                <h2 class="section-title text-4xl mb-6">关键结论</h2>
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto">
+                    基于综合分析得出的核心发现，为后续环境治理提供科学依据
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div class="data-card glass-card rounded-xl p-8 fade-in stagger-1">
+                    <div class="flex items-center mb-6">
+                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
+                            <i class="fas fa-chart-line text-green-600 text-xl"></i>
+                        </div>
+                        <h3 class="text-2xl font-semibold text-gray-800">治理成效显著</h3>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="border-l-4 border-green-400 pl-4">
+                            <h4 class="font-semibold text-gray-800 mb-2">SO₂浓度基本消除</h4>
+                            <p class="text-gray-600 text-sm">通过全面淘汰中小型燃煤锅炉、完成工业窑炉脱硫改造、推进城乡"煤改电/煤改气"，从源头切断燃煤源排放</p>
+                        </div>
+                        <div class="border-l-4 border-blue-400 pl-4">
+                            <h4 class="font-semibold text-gray-800 mb-2">NO₂浓度持续下降</h4>
+                            <p class="text-gray-600 text-sm">港口船舶尾气长效管控机制有效，通过岸电覆盖、混合动力拖轮投用等措施削减排放</p>
+                        </div>
+                        <div class="border-l-4 border-purple-400 pl-4">
+                            <h4 class="font-semibold text-gray-800 mb-2">交通污染平稳控制</h4>
+                            <p class="text-gray-600 text-sm">"限行控量+新能源减量"双重措施抵消污染增量，实现交通污染平抑</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="data-card glass-card rounded-xl p-8 fade-in stagger-2">
+                    <div class="flex items-center mb-6">
+                        <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-4">
+                            <i class="fas fa-exclamation-triangle text-orange-600 text-xl"></i>
+                        </div>
+                        <h3 class="text-2xl font-semibold text-gray-800">待解决问题</h3>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="border-l-4 border-orange-400 pl-4">
+                            <h4 class="font-semibold text-gray-800 mb-2">颗粒物污染仍需关注</h4>
+                            <p class="text-gray-600 text-sm">PM2.5和PM10仍是主要污染物，春季浓度较高，需要加强扬尘管控</p>
+                        </div>
+                        <div class="border-l-4 border-red-400 pl-4">
+                            <h4 class="font-semibold text-gray-800 mb-2">区域差异明显</h4>
+                            <p class="text-gray-600 text-sm">美食街和高速路区域颗粒物浓度显著高于宿舍区，需要针对性治理措施</p>
+                        </div>
+                        <div class="border-l-4 border-yellow-400 pl-4">
+                            <h4 class="font-semibold text-gray-800 mb-2">O₃污染控制难度大</h4>
+                            <p class="text-gray-600 text-sm">光化学污染治理难度较高，需要强化挥发性有机物与氮氧化物的协同管控</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Recommendations -->
+    <section id="recommendations" class="py-20 bg-gray-50">
+        <div class="max-w-6xl mx-auto px-6">
+            <div class="text-center mb-16 fade-in">
+                <h2 class="section-title text-4xl mb-6">治理成效与政策建议</h2>
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto">
+                    基于调研结果，提出针对性的环境治理建议和未来工作方向
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="data-card glass-card rounded-xl p-6 fade-in stagger-1">
+                    <div class="text-center mb-6">
+                        <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-industry text-blue-600 text-2xl"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold text-gray-800">工业源治理</h3>
+                    </div>
+                    <ul class="space-y-3 text-sm text-gray-600">
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-500 mr-2 mt-0.5"></i>
+                            <span>持续推进燃煤锅炉淘汰和脱硫改造</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-500 mr-2 mt-0.5"></i>
+                            <span>加强工业企业挥发性有机物治理</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-500 mr-2 mt-0.5"></i>
+                            <span>完善港口船舶尾气管控机制</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="data-card glass-card rounded-xl p-6 fade-in stagger-2">
+                    <div class="text-center mb-6">
+                        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-road text-green-600 text-2xl"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold text-gray-800">移动源管控</h3>
+                    </div>
+                    <ul class="space-y-3 text-sm text-gray-600">
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-500 mr-2 mt-0.5"></i>
+                            <span>扩大新能源汽车推广应用</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-500 mr-2 mt-0.5"></i>
+                            <span>优化交通管控措施，实施差异化限行</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-500 mr-2 mt-0.5"></i>
+                            <span>加强道路扬尘综合治理</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="data-card glass-card rounded-xl p-6 fade-in stagger-3">
+                    <div class="text-center mb-6">
+                        <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-flask text-purple-600 text-2xl"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold text-gray-800">科技支撑</h3>
+                    </div>
+                    <ul class="space-y-3 text-sm text-gray-600">
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-500 mr-2 mt-0.5"></i>
+                            <span>建立精细化空气质量监测网络</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-500 mr-2 mt-0.5"></i>
+                            <span>加强大气环境科研能力建设</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-500 mr-2 mt-0.5"></i>
+                            <span>推进智慧环保平台建设</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="mt-16 text-center fade-in stagger-4">
+                <div class="glass-card rounded-xl p-8 max-w-4xl mx-auto">
+                    <h3 class="text-2xl font-semibold text-gray-800 mb-6">核心政策成效</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="text-center">
+                            <div class="text-4xl font-bold text-green-600 mb-2">95%</div>
+                            <div class="text-gray-600">SO₂浓度下降幅度</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-4xl font-bold text-blue-600 mb-2">80%</div>
+                            <div class="text-gray-600">NO₂浓度下降幅度</div>
+                        </div>
+                    </div>
+                    <p class="text-lg text-gray-600 mt-6">
+                        通过"大气十条"、蓝天保卫战等国家政策的有效落实，海港区空气质量得到显著改善，为区域可持续发展奠定了坚实基础。
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-12">
+        <div class="max-w-6xl mx-auto px-6 text-center">
+            <div class="flex items-center justify-center space-x-3 mb-6">
+                <div class="w-10 h-10 bg-gradient-to-br from-green-400 to-green-600 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-leaf text-white text-lg"></i>
+                </div>
+                <span class="text-xl font-semibold">海港区空气质量调研报告</span>
+            </div>
+            <p class="text-gray-400 mb-4">
+                基于科学数据分析，为环境治理决策提供专业支撑
+            </p>
+            <div class="text-sm text-gray-500">
+                © 2024 海港区环境监测项目 | 数据更新时间：2024年12月
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Initialize Vanta.js background
+        VANTA.BIRDS({
+            el: "#vanta-bg",
+            mouseControls: true,
+            touchControls: true,
+            gyroControls: false,
+            minHeight: 200.00,
+            minWidth: 200.00,
+            scale: 1.00,
+            scaleMobile: 1.00,
+            backgroundColor: 0xf8fafc,
+            color1: 0x2c5530,
+            color2: 0x8fbc8f,
+            colorMode: "lerp",
+            birdSize: 1.20,
+            wingSpan: 25.00,
+            speedLimit: 3.00,
+            separation: 20.00,
+            alignment: 20.00,
+            cohesion: 20.00,
+            quantity: 3.00
+        });
+
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Add scroll-based animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.fade-in').forEach(el => {
+            observer.observe(el);
+        });
+
+        // Interactive elements hover effects
+        document.querySelectorAll('.interactive-element').forEach(element => {
+            element.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.02) translateY(-2px)';
+            });
+            
+            element.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1) translateY(0)';
+            });
+        });
+
+        // Add click effects for data cards
+        document.querySelectorAll('.data-card').forEach(card => {
+            card.addEventListener('click', function() {
+                this.style.transform = 'scale(0.98)';
+                setTimeout(() => {
+                    this.style.transform = 'scale(1)';
+                }, 150);
+            });
+        });
+
+        // Dynamic chart data simulation (placeholder for future implementation)
+        function updateChartData() {
+            // This would be used to update charts with real data
+            console.log('Chart data updated');
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add loading animation
+            document.body.style.opacity = '0';
+            setTimeout(() => {
+                document.body.style.transition = 'opacity 0.5s ease';
+                document.body.style.opacity = '1';
+            }, 100);
+            
+            // Initialize tooltips or other interactive elements
+            console.log('Page initialized successfully');
+        });
+    </script>
+</body>
+</html>
